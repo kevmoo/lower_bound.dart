@@ -4,7 +4,7 @@ engine.
 `lower_bound` verifies that a Dart package or monorepo compiles cleanly against
 the minimal satisfiable dependency floors specified in `pubspec.yaml`.
 
-## ✨ Features
+## Features
 
 - **Synthetic Runtime Isolation**:
   - Stages `lib/` and `bin/` directories in temporary isolation to prevent
@@ -38,7 +38,7 @@ the minimal satisfiable dependency floors specified in `pubspec.yaml`.
   - Supports `--comment-output` and `--max-comment-rows` for paginated, sticky
     PR comments.
 
-## ⚡ Quick Start
+## Quick Start
 
 ### CLI
 
