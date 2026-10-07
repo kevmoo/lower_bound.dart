@@ -42,29 +42,32 @@ the minimal satisfiable dependency floors specified in `pubspec.yaml`.
 
 ### CLI
 
+Run directly in any Dart or Flutter project without prior installation or
+`pubspec.yaml` changes (requires Dart SDK **3.12.0 or greater**):
+
 Validate the current package or monorepo workspace:
 
 ```bash
-dart run lower_bound
+dart run lower_bound@
 ```
 
 Validate a specific package directory or monorepo root (workspace members are
 automatically expanded):
 
 ```bash
-dart run lower_bound path/to/my_package
+dart run lower_bound@ path/to/my_package
 ```
 
 Output results as JSON:
 
 ```bash
-dart run lower_bound --format=json
+dart run lower_bound@ --format=json
 ```
 
 Generate a sticky PR comment report:
 
 ```bash
-dart run lower_bound --comment-output=comment.md --max-comment-rows=10
+dart run lower_bound@ --comment-output=comment.md --max-comment-rows=10
 ```
 
 ### GitHub Action
