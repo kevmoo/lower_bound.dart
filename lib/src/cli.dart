@@ -132,49 +132,55 @@ List<String>? _expandExplicitPath(String rawPath, StringSink err) {
     err.writeln('Directory does not exist: $rawPath');
     return null;
   }
-  final pubspecFile = File(p.join(dir.path, 'pubspec.yaml'));
+  return _expandPackageOrMonorepo(
+    dir.path,
+    err,
+    missingMessage: 'No pubspec.yaml found in $rawPath',
+  );
+}
+
+List<String>? _resolveCwdWorkspace(String cwd, StringSink err) =>
+    _expandPackageOrMonorepo(
+      cwd,
+      err,
+      missingMessage: 'No pubspec.yaml found in current directory: $cwd',
+    );
+
+List<String>? _expandPackageOrMonorepo(
+  String dirPath,
+  StringSink err, {
+  required String missingMessage,
+}) {
+  final pubspecFile = File(p.join(dirPath, 'pubspec.yaml'));
   if (!pubspecFile.existsSync()) {
-    err.writeln('No pubspec.yaml found in $rawPath');
+    final subpackages = findMonorepoSubpackages(dirPath);
+    if (subpackages.isNotEmpty) return subpackages;
+    err.writeln(missingMessage);
     return null;
   }
 
   try {
-    final parsed = parsePubspec(dir.path);
-    if (parsed.isWorkspaceRoot) {
-      return _expandWorkspaceMembers(dir.path, parsed.workspace!);
+    final parsed = parsePubspec(dirPath);
+    if (!parsed.isWorkspaceRoot) {
+      return [dirPath];
     }
-    return [dir.path];
+    final expanded = _expandWorkspaceMembers(dirPath, parsed.workspace!);
+    return expanded.isEmpty ? null : expanded;
   } catch (e) {
-    err.writeln('Failed to parse pubspec in $rawPath: $e');
+    err.writeln('Failed to parse pubspec in $dirPath: $e');
     return null;
   }
 }
 
 List<String> _expandWorkspaceMembers(String rootPath, List<String> members) {
-  final paths = <String>[];
-  for (final member in members) {
-    final memberDir = Directory(p.join(rootPath, member));
-    if (memberDir.existsSync()) {
-      paths.add(memberDir.path);
-    }
-  }
-  return paths;
-}
-
-List<String>? _resolveCwdWorkspace(String cwd, StringSink err) {
-  final pubspecFile = File(p.join(cwd, 'pubspec.yaml'));
-  if (!pubspecFile.existsSync()) {
-    err.writeln('No pubspec.yaml found in current directory: $cwd');
-    return null;
-  }
-
-  final parsed = parsePubspec(cwd);
-  if (!parsed.isWorkspaceRoot) {
-    return [cwd];
-  }
-
-  final paths = _expandWorkspaceMembers(cwd, parsed.workspace!);
-  return paths.isEmpty ? null : paths;
+  final candidates = <String>{
+    if (hasAnalyzableSource(rootPath)) p.normalize(rootPath),
+    for (final member in members)
+      if (Directory(p.join(rootPath, member)).existsSync())
+        p.normalize(p.join(rootPath, member)),
+    for (final subpkg in findMonorepoSubpackages(rootPath)) p.normalize(subpkg),
+  };
+  return filterPublishableOrAll(candidates.toList());
 }
 
 Future<int> _runValidationSuite(

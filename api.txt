@@ -3,7 +3,7 @@ environment:
 executables:
   lower_bound
 package:lower_bound/lower_bound.dart:
-  validatePackageLowerBounds (function: Future<LowerBoundValidationResult> Function({bool allowLocalSiblings, Directory? baseTempDir, StringSink? errSink, bool keepTemp, Map<String, LocalSibling>? localSiblings, required String packagePath, Version? sdkOverride, List<String> targets}))
+  validatePackageLowerBounds (function: Future<LowerBoundValidationResult> Function({bool allowLocalSiblings, Directory? baseTempDir, StringSink? errSink, bool keepTemp, required String packagePath, Version? sdkOverride, List<String> targets}))
   DependencyFloor (class extends Object):
     new (const constructor: DependencyFloor Function({required VersionConstraint declaredConstraint, bool isLocalPathOverride, bool isNonHosted, String? localPath, String? localVersion, required Version? lowerBound, required String name}))
     declaredConstraint (getter: VersionConstraint)
@@ -42,8 +42,6 @@ package:lower_bound/lower_bound.dart:
     resolvedVersions (getter: Map<String, Version>)
     warnings (getter: List<String>)
     toJson (method: Map<String, Object?> Function())
-package:lower_bound/src/pubspec_helper.dart:
-  LocalSibling (non-public)
 dart:async:
   Future (referenced)
 dart:core:

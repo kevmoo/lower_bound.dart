@@ -60,18 +60,32 @@ class SyntheticStaging {
     final optionsFile = _findAnalysisOptionsFile();
     if (optionsFile == null) return;
 
-    final raw = optionsFile.readAsStringSync();
+    final sanitized = _sanitizeAnalysisOptions(optionsFile.readAsStringSync());
+    File(
+      p.join(stagingDir.path, 'analysis_options.yaml'),
+    ).writeAsStringSync(sanitized);
+  }
+
+  String _sanitizeAnalysisOptions(String raw) {
     final sanitizedLines = <String>[];
+    var inIncludeList = false;
+
     for (final line in raw.split('\n')) {
-      if (line.trim().startsWith('include:')) {
-        sanitizedLines.add('# [lower_bound stripped include: ${line.trim()}]');
+      final trimmed = line.trim();
+      if (trimmed.startsWith('include:')) {
+        sanitizedLines.add('# [lower_bound stripped include: $trimmed]');
+        final afterColon = trimmed.substring('include:'.length).trim();
+        inIncludeList = afterColon.isEmpty || afterColon.startsWith('#');
+      } else if (inIncludeList && trimmed.startsWith('-')) {
+        sanitizedLines.add('# [lower_bound stripped include item: $trimmed]');
       } else {
+        if (trimmed.isNotEmpty && !trimmed.startsWith('#')) {
+          inIncludeList = false;
+        }
         sanitizedLines.add(line);
       }
     }
-    File(
-      p.join(stagingDir.path, 'analysis_options.yaml'),
-    ).writeAsStringSync(sanitizedLines.join('\n'));
+    return sanitizedLines.join('\n');
   }
 
   File? _findAnalysisOptionsFile() {
@@ -225,7 +239,16 @@ class SyntheticStaging {
   }
 
   String? _extractPackageVersion(String name, String rootUri) {
-    final match = RegExp(r'-(\d+\.\d+\.\d+.*)$').firstMatch(rootUri);
+    final trimmedUri = rootUri.endsWith('/')
+        ? rootUri.substring(0, rootUri.length - 1)
+        : rootUri;
+    final lastSlash = trimmedUri.lastIndexOf('/');
+    final dirName = lastSlash >= 0
+        ? trimmedUri.substring(lastSlash + 1)
+        : trimmedUri;
+    final match = RegExp(
+      '^${RegExp.escape(name)}-(\\d+\\.\\d+\\.\\d+.*)\$',
+    ).firstMatch(dirName);
     if (match != null) {
       return match.group(1);
     }

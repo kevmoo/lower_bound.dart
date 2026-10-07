@@ -204,10 +204,54 @@ bool _isRootCandidate(Directory dir) {
   }
 }
 
+/// Returns whether [packagePath] contains `lib/` or `bin/` source directories.
+bool hasAnalyzableSource(String packagePath) =>
+    Directory(p.join(packagePath, 'lib')).existsSync() ||
+    Directory(p.join(packagePath, 'bin')).existsSync();
+
+/// Filters [candidatePaths] during workspace or monorepo expansion.
+///
+/// Retains directories containing a valid `pubspec.yaml` and analyzable source
+/// (`lib/` or `bin/`). When at least one candidate is publishable
+/// (`publish_to != 'none'`), `publish_to: none` internal test/example packages
+/// are excluded from the expansion.
+List<String> filterPublishableOrAll(List<String> candidatePaths) {
+  final valid = <({String path, ParsedPubspec pubspec})>[];
+  for (final path in candidatePaths) {
+    if (!File(p.join(path, 'pubspec.yaml')).existsSync()) continue;
+    if (!hasAnalyzableSource(path)) continue;
+    try {
+      valid.add((path: path, pubspec: parsePubspec(path)));
+    } catch (_) {}
+  }
+
+  final hasPublishable = valid.any((entry) => entry.pubspec.isPublishable);
+  if (hasPublishable) {
+    return [
+      for (final entry in valid)
+        if (entry.pubspec.isPublishable) entry.path,
+    ];
+  }
+  return [for (final entry in valid) entry.path];
+}
+
+/// Discovers subpackages under `packages/` or `pkgs/` when [repoPath] is a
+/// multi-package repository root without a root `pubspec.yaml`.
+List<String> findMonorepoSubpackages(String repoPath) {
+  final rootDir = Directory(repoPath);
+  if (!rootDir.existsSync()) return const [];
+  final candidates = <Directory>[];
+  _addNamedPackageSubdirs(rootDir, 'packages', candidates);
+  _addNamedPackageSubdirs(rootDir, 'pkgs', candidates);
+  final paths = [for (final d in candidates) d.path]..sort();
+  return filterPublishableOrAll(paths);
+}
+
 List<Directory> _collectCandidateSiblingDirs(Directory rootDir) {
-  final candidateDirs = <Directory>[];
+  final candidateDirs = <Directory>[rootDir];
   _addWorkspaceMemberDirs(rootDir, candidateDirs);
-  _addPackagesSubdirs(rootDir, candidateDirs);
+  _addNamedPackageSubdirs(rootDir, 'packages', candidateDirs);
+  _addNamedPackageSubdirs(rootDir, 'pkgs', candidateDirs);
   return candidateDirs;
 }
 
@@ -225,8 +269,12 @@ void _addWorkspaceMemberDirs(Directory rootDir, List<Directory> candidates) {
   } catch (_) {}
 }
 
-void _addPackagesSubdirs(Directory rootDir, List<Directory> candidates) {
-  final packagesDir = Directory(p.join(rootDir.path, 'packages'));
+void _addNamedPackageSubdirs(
+  Directory rootDir,
+  String dirName,
+  List<Directory> candidates,
+) {
+  final packagesDir = Directory(p.join(rootDir.path, dirName));
   if (!packagesDir.existsSync()) return;
 
   for (final entity in packagesDir.listSync()) {

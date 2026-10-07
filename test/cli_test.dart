@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
-import 'package:analytica/testing.dart';
 import 'package:checks/checks.dart';
+import 'package:cli_util/cli_util.dart';
 import 'package:lower_bound/src/cli.dart';
-import 'package:lower_bound/src/sdk_discovery.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_descriptor/test_descriptor.dart' as d;
@@ -12,11 +12,27 @@ import 'package:test_process/test_process.dart';
 
 void main() {
   late String binPath;
+  final dartExe =
+      dartExecutable ??
+      (throw StateError('Could not locate a Dart executable.'));
 
   setUpAll(() async {
-    binPath = await resolvePackageExecutable(
-      'package:lower_bound/lower_bound.dart',
+    final libUri = await Isolate.resolvePackageUri(
+      Uri.parse('package:lower_bound/lower_bound.dart'),
     );
+    var pkgRoot = p.dirname(libUri!.toFilePath());
+    for (
+      var i = 0;
+      i <
+          Uri.parse(
+                'package:lower_bound/lower_bound.dart',
+              ).pathSegments.length -
+              1;
+      i++
+    ) {
+      pkgRoot = p.dirname(pkgRoot);
+    }
+    binPath = p.join(pkgRoot, 'bin', 'lower_bound.dart');
   });
 
   group('CLI Options & Resolution', () {
@@ -80,7 +96,7 @@ environment:
 
       final commentFile = p.join(d.sandbox, 'comment.md');
 
-      final proc = await TestProcess.start(dartExecutable, [
+      final proc = await TestProcess.start(dartExe, [
         binPath,
         '--comment-output=$commentFile',
         '--max-comment-rows=1',
@@ -112,7 +128,7 @@ void main() {
 
       final commentFile = p.join(d.sandbox, 'comment.md');
 
-      final proc = await TestProcess.start(dartExecutable, [
+      final proc = await TestProcess.start(dartExe, [
         binPath,
         '--comment-output=$commentFile',
         '--max-comment-rows=1',
@@ -144,7 +160,7 @@ environment:
         d.dir('lib', [d.file('json_pkg.dart', 'const a = 1;')]),
       ]).create();
 
-      final proc = await TestProcess.start(dartExecutable, [
+      final proc = await TestProcess.start(dartExe, [
         binPath,
         '--format=json',
         p.join(d.sandbox, 'json_pkg'),
@@ -198,6 +214,127 @@ environment:
         check(exitCode).equals(0);
         check(out.toString()).contains('member_a');
         check(out.toString()).contains('member_b');
+      },
+    );
+
+    test(
+      'validates workspace root package itself and skips publish_to: none test '
+      'members when root is publishable',
+      () async {
+        await d.dir('pkg_with_e2e_workspace', [
+          d.file('pubspec.yaml', '''
+name: bazel_worker_like
+version: 1.0.0
+workspace:
+  - e2e_test
+environment:
+  sdk: '^3.12.0'
+'''),
+          d.dir('lib', [d.file('worker.dart', 'const w = 1;')]),
+          d.dir('e2e_test', [
+            d.file('pubspec.yaml', '''
+name: e2e_test
+publish_to: none
+resolution: workspace
+environment:
+  sdk: '^3.12.0'
+dependencies:
+  bazel_worker_like: any
+'''),
+            d.dir('lib', [d.file('e2e.dart', 'const e = 1;')]),
+          ]),
+        ]).create();
+
+        final out = StringBuffer();
+        final exitCode = await runLowerBoundCli([
+          p.join(d.sandbox, 'pkg_with_e2e_workspace'),
+        ], stdoutSink: out);
+        check(exitCode).equals(0);
+        check(out.toString()).contains('bazel_worker_like');
+        check(out.toString()).not((s) => s.contains('e2e_test'));
+      },
+    );
+
+    test(
+      'expands publishable subpackages in pkgs/ monorepo without root pubspec',
+      () async {
+        await d.dir('pkgs_monorepo', [
+          d.dir('pkgs', [
+            d.dir('pkg_one', [
+              d.file('pubspec.yaml', '''
+name: pkg_one
+version: 1.0.0
+environment:
+  sdk: '^3.12.0'
+'''),
+              d.dir('lib', [d.file('pkg_one.dart', 'const a = 1;')]),
+            ]),
+            d.dir('_compliance_tests', [
+              d.file('pubspec.yaml', '''
+name: _compliance_tests
+publish_to: none
+environment:
+  sdk: '^3.12.0'
+dependencies:
+  pkg_one: any
+'''),
+              d.dir('lib', [d.file('compliance.dart', 'const c = 1;')]),
+            ]),
+          ]),
+        ]).create();
+
+        final out = StringBuffer();
+        final exitCode = await runLowerBoundCli([
+          p.join(d.sandbox, 'pkgs_monorepo'),
+        ], stdoutSink: out);
+        check(exitCode).equals(0);
+        check(out.toString()).contains('pkg_one');
+        check(out.toString()).not((s) => s.contains('_compliance_tests'));
+      },
+    );
+
+    test(
+      'expands both workspace members and non-workspace pkgs/ subpackages',
+      () async {
+        await d.dir('hybrid_workspace', [
+          d.file('pubspec.yaml', '''
+name: hybrid_workspace
+publish_to: none
+environment:
+  sdk: '^3.12.0'
+workspace:
+  - pkgs/pkg_in_ws
+'''),
+          d.dir('pkgs', [
+            d.dir('pkg_in_ws', [
+              d.file('pubspec.yaml', '''
+name: pkg_in_ws
+version: 1.0.0
+resolution: workspace
+environment:
+  sdk: '^3.12.0'
+'''),
+              d.dir('lib', [d.file('in_ws.dart', 'const a = 1;')]),
+            ]),
+            d.dir('pkg_outside_ws', [
+              d.file('pubspec.yaml', '''
+name: pkg_outside_ws
+version: 1.0.0
+environment:
+  sdk: '^3.12.0'
+'''),
+              d.dir('lib', [d.file('out_ws.dart', 'const b = 2;')]),
+            ]),
+          ]),
+        ]).create();
+
+        final out = StringBuffer();
+        final exitCode = await runLowerBoundCli([
+          p.join(d.sandbox, 'hybrid_workspace'),
+        ], stdoutSink: out);
+        check(exitCode).equals(0);
+        check(out.toString()).contains('pkg_in_ws');
+        check(out.toString()).contains('pkg_outside_ws');
       },
     );
   });
