@@ -317,5 +317,112 @@ dependencies:
         staging.dispose();
       }
     });
+
+    test('strips multi-line include lists in analysis_options.yaml', () async {
+      await d.dir('multiline_include', [
+        d.file('pubspec.yaml', '''
+name: multiline_include
+environment:
+  sdk: '^3.12.0'
+dependencies:
+  path: ^1.9.0
+'''),
+        d.dir('lib', [d.file('a.dart', 'const a = 1;')]),
+        d.file('analysis_options.yaml', '''
+include:
+  - package:dart_flutter_team_lints/analysis_options.yaml
+  - ../shared_options.yaml
+
+analyzer:
+  language:
+    strict-raw-types: true
+'''),
+      ]).create();
+
+      final pkgPath = p.join(d.sandbox, 'multiline_include');
+      final parsed = parsePubspec(pkgPath);
+      final staging = SyntheticStaging.create(
+        sourcePackagePath: pkgPath,
+        pubspec: parsed,
+      );
+
+      try {
+        final stagedOptions = File(
+          p.join(staging.stagingDir.path, 'analysis_options.yaml'),
+        ).readAsStringSync();
+        check(stagedOptions).contains('# [lower_bound stripped include:');
+        check(stagedOptions).contains(
+          '# [lower_bound stripped include item: - package:dart_flutter_team_lints/analysis_options.yaml]',
+        );
+        check(stagedOptions).contains(
+          '# [lower_bound stripped include item: - ../shared_options.yaml]',
+        );
+        check(stagedOptions).contains('strict-raw-types: true');
+      } finally {
+        staging.dispose();
+      }
+    });
+
+    test(
+      'does not misread parent worktree version suffix as resolved version',
+      () async {
+        await d.dir('_worktree-2.16.2', [
+          d.dir('local_pkg', [
+            d.file('pubspec.yaml', '''
+name: local_pkg
+version: 0.4.0
+environment:
+  sdk: '^3.12.0'
+'''),
+          ]),
+          d.dir('consumer', [
+            d.file('pubspec.yaml', '''
+name: consumer
+environment:
+  sdk: '^3.12.0'
+dependencies:
+  local_pkg: ^0.4.0
+'''),
+            d.dir('lib', [d.file('c.dart', '')]),
+          ]),
+        ]).create();
+
+        final consumerPath = p.join(d.sandbox, '_worktree-2.16.2', 'consumer');
+        final localPkgUri = Directory(
+          p.join(d.sandbox, '_worktree-2.16.2', 'local_pkg'),
+        ).uri;
+        final parsed = parsePubspec(consumerPath);
+        final staging = SyntheticStaging.create(
+          sourcePackagePath: consumerPath,
+          pubspec: parsed,
+        );
+
+        try {
+          final dotDartTool = Directory(
+            p.join(staging.stagingDir.path, '.dart_tool'),
+          )..createSync(recursive: true);
+
+          File(
+            p.join(dotDartTool.path, 'package_config.json'),
+          ).writeAsStringSync('''
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "name": "local_pkg",
+      "rootUri": "$localPkgUri",
+      "packageUri": "lib/"
+    }
+  ]
+}
+''');
+
+          final versions = staging.readResolvedVersions();
+          check(versions['local_pkg']).equals('0.4.0');
+        } finally {
+          staging.dispose();
+        }
+      },
+    );
   });
 }

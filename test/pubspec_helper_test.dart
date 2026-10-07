@@ -149,5 +149,41 @@ environment:
         check(pkgC.isPublishToNone).isTrue();
       },
     );
+
+    test(
+      'finds local siblings in pkgs/ layout and includes workspace root itself',
+      () async {
+        await d.dir('pkgs_repo', [
+          d.dir('.git', []),
+          d.dir('pkgs', [
+            d.dir('alpha', [
+              d.file('pubspec.yaml', '''
+name: alpha
+version: 0.2.0-wip
+environment:
+  sdk: '^3.12.0'
+'''),
+            ]),
+            d.dir('beta', [
+              d.file('pubspec.yaml', '''
+name: beta
+version: 1.0.0
+environment:
+  sdk: '^3.12.0'
+dependencies:
+  alpha: ^0.2.0-wip
+'''),
+            ]),
+          ]),
+        ]).create();
+
+        final siblings = findLocalSiblings(
+          p.join(d.sandbox, 'pkgs_repo', 'pkgs', 'beta'),
+        );
+        check(siblings).containsKey('alpha');
+        check(siblings['alpha']!.isWip).isTrue();
+        check(siblings).containsKey('beta');
+      },
+    );
   });
 }

@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cli_util/cli_util.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 
 import 'models.dart';
 import 'pubspec_helper.dart';
-import 'sdk_discovery.dart';
 import 'synthetic_staging.dart';
 
 /// Validates the lower bounds of the package at [packagePath].
@@ -23,7 +23,6 @@ Future<LowerBoundValidationResult> validatePackageLowerBounds({
   bool keepTemp = false,
   bool allowLocalSiblings = false,
   Version? sdkOverride,
-  Map<String, LocalSibling>? localSiblings,
   Directory? baseTempDir,
   StringSink? errSink,
 }) async {
@@ -38,7 +37,6 @@ Future<LowerBoundValidationResult> validatePackageLowerBounds({
     sourcePackagePath: packagePath,
     pubspec: parsed,
     baseTempDir: baseTempDir,
-    localSiblings: localSiblings,
   );
 
   try {
@@ -264,11 +262,14 @@ void _cleanupStaging(
   }
 }
 
+String get _dartExecutable =>
+    dartExecutable ?? (throw StateError('Could not locate a Dart executable.'));
+
 Future<ProcessResult> _runPubDowngrade({
   required String workingDirectory,
   required Version simulatedSdk,
 }) async => Process.run(
-  dartExecutable,
+  _dartExecutable,
   ['pub', 'downgrade'],
   workingDirectory: workingDirectory,
   environment: {'_PUB_TEST_SDK_VERSION': simulatedSdk.toString()},
@@ -277,7 +278,7 @@ Future<ProcessResult> _runPubDowngrade({
 Future<ProcessResult> _runDartAnalyze({
   required String workingDirectory,
   required List<String> targets,
-}) async => Process.run(dartExecutable, [
+}) async => Process.run(_dartExecutable, [
   'analyze',
   '--format=json',
   ...targets,
