@@ -104,7 +104,7 @@ environment:
       ]);
       await proc.shouldExit(0);
 
-      check(File(commentFile).existsSync()).isFalse();
+      check(File(commentFile).existsSync()).isFalse;
     });
 
     test('writes sticky PR comment when run is dirty', () async {
@@ -251,7 +251,7 @@ dependencies:
         ], stdoutSink: out);
         check(exitCode).equals(0);
         check(out.toString()).contains('bazel_worker_like');
-        check(out.toString()).not((s) => s.contains('e2e_test'));
+        check(out.toString()).not(.it()..contains('e2e_test'));
       },
     );
 
@@ -289,7 +289,7 @@ dependencies:
         ], stdoutSink: out);
         check(exitCode).equals(0);
         check(out.toString()).contains('pkg_one');
-        check(out.toString()).not((s) => s.contains('_compliance_tests'));
+        check(out.toString()).not(.it()..contains('_compliance_tests'));
       },
     );
 
