@@ -29,8 +29,8 @@ dev_dependencies:
       check(parsed.name).equals('sample_pkg');
       check(parsed.version).equals(Version(1, 0, 0));
       check(parsed.minSdk).equals(Version(3, 10, 0));
-      check(parsed.isPublishable).isTrue();
-      check(parsed.isWip).isFalse();
+      check(parsed.isPublishable).isTrue;
+      check(parsed.isWip).isFalse;
       check(parsed.dependencies).length.equals(3);
 
       final pathDep = parsed.dependencies.firstWhere((d) => d.name == 'path');
@@ -58,8 +58,8 @@ dependencies:
 
       final parsed = parsePubspec(p.join(d.sandbox, 'wip_pkg'));
       check(parsed.name).equals('wip_pkg');
-      check(parsed.isPublishable).isFalse();
-      check(parsed.isWip).isTrue();
+      check(parsed.isPublishable).isFalse;
+      check(parsed.isWip).isTrue;
       check(parsed.minSdk).equals(Version(3, 12, 0));
     });
 
@@ -138,15 +138,15 @@ environment:
         check(siblings).containsKey('pkg_c');
 
         final pkgA = siblings['pkg_a']!;
-        check(pkgA.isWip).isTrue();
-        check(pkgA.isPublishToNone).isFalse();
+        check(pkgA.isWip).isTrue;
+        check(pkgA.isPublishToNone).isFalse;
 
         final pkgB = siblings['pkg_b']!;
-        check(pkgB.isWip).isFalse();
-        check(pkgB.isPublishToNone).isFalse();
+        check(pkgB.isWip).isFalse;
+        check(pkgB.isPublishToNone).isFalse;
 
         final pkgC = siblings['pkg_c']!;
-        check(pkgC.isPublishToNone).isTrue();
+        check(pkgC.isPublishToNone).isTrue;
       },
     );
 
@@ -181,7 +181,7 @@ dependencies:
           p.join(d.sandbox, 'pkgs_repo', 'pkgs', 'beta'),
         );
         check(siblings).containsKey('alpha');
-        check(siblings['alpha']!.isWip).isTrue();
+        check(siblings['alpha']!.isWip).isTrue;
         check(siblings).containsKey('beta');
       },
     );

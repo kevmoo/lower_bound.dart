@@ -21,10 +21,10 @@ environment:
         packagePath: p.join(d.sandbox, 'no_deps'),
       );
 
-      check(res.isClean).isTrue();
-      check(res.dependencies).isEmpty();
-      check(res.pubGetSuccess).isTrue();
-      check(res.analyzeSuccess).isTrue();
+      check(res.isClean).isTrue;
+      check(res.dependencies).isEmpty;
+      check(res.pubGetSuccess).isTrue;
+      check(res.analyzeSuccess).isTrue;
     });
 
     test('validates package with clean dependency floor', () async {
@@ -49,7 +49,7 @@ String joinPaths(String a, String b) => p.join(a, b);
         packagePath: p.join(d.sandbox, 'clean_pkg'),
       );
 
-      check(res.isClean).isTrue();
+      check(res.isClean).isTrue;
       check(res.dependencies).length.equals(1);
       check(res.dependencies.first.name).equals('path');
       check(res.dependencies.first.lowerBound).equals(Version(1, 9, 0));
@@ -83,10 +83,10 @@ void broken() {
           packagePath: p.join(d.sandbox, 'broken_pkg'),
         );
 
-        check(res.isClean).isFalse();
-        check(res.pubGetSuccess).isTrue();
-        check(res.analyzeSuccess).isFalse();
-        check(res.analyzerErrors).isNotEmpty();
+        check(res.isClean).isFalse;
+        check(res.pubGetSuccess).isTrue;
+        check(res.analyzeSuccess).isFalse;
+        check(res.analyzerErrors).isNotEmpty;
       },
     );
   });

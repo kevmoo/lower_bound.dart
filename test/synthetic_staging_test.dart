@@ -46,12 +46,12 @@ analyzer:
             File(
               p.join(staging.stagingDir.path, 'lib', 'staging_test.dart'),
             ).existsSync(),
-          ).isTrue();
+          ).isTrue;
           check(
             File(
               p.join(staging.stagingDir.path, 'bin', 'tool.dart'),
             ).existsSync(),
-          ).isTrue();
+          ).isTrue;
 
           staging.writePubspec();
 
@@ -64,10 +64,8 @@ analyzer:
           check(stagedPubspecContent).contains('path: \'^1.9.0\'');
           check(
             stagedPubspecContent,
-          ).not((c) => c.contains('resolution: workspace'));
-          check(
-            stagedPubspecContent,
-          ).not((c) => c.contains('dev_dependencies'));
+          ).not(.it()..contains('resolution: workspace'));
+          check(stagedPubspecContent).not(.it()..contains('dev_dependencies'));
 
           final stagedOptions = File(
             p.join(staging.stagingDir.path, 'analysis_options.yaml'),
@@ -311,8 +309,8 @@ dependencies:
         // A relative path would resolve against the staging temp directory.
         final pathDep = reparsed.dependencies['local_dep'];
         check(pathDep).isA<PathDependency>();
-        check(p.isAbsolute((pathDep as PathDependency).path)).isTrue();
-        check(Directory(pathDep.path).existsSync()).isTrue();
+        check(p.isAbsolute((pathDep as PathDependency).path)).isTrue;
+        check(Directory(pathDep.path).existsSync()).isTrue;
       } finally {
         staging.dispose();
       }

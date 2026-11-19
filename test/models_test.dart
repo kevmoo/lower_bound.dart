@@ -14,7 +14,7 @@ void main() {
 
       check(floor.name).equals('args');
       check(floor.lowerBound).equals(Version(2, 7, 0));
-      check(floor.isLocalPathOverride).isFalse();
+      check(floor.isLocalPathOverride).isFalse;
       check(floor.toString()).contains('args: ^2.7.0 (floor: 2.7.0)');
 
       final json = floor.toJson();
@@ -34,7 +34,7 @@ void main() {
         localVersion: '0.1.0-wip',
       );
 
-      check(floor.isLocalPathOverride).isTrue();
+      check(floor.isLocalPathOverride).isTrue;
       check(floor.toString()).contains('local path override');
 
       final json = floor.toJson();
@@ -60,7 +60,7 @@ void main() {
         analyzeSuccess: true,
       );
 
-      check(result.isClean).isTrue();
+      check(result.isClean).isTrue;
       final json = result.toJson();
       check(json['package']).equals('my_pkg');
       check(json['clean']).equals(true);
